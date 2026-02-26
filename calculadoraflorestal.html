@@ -1,0 +1,775 @@
+<!doctype html>
+<html lang="pt-BR" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calculadora Florestal</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Outfit', sans-serif; }
+    .gradient-bg {
+      background: linear-gradient(135deg, #0d3b25 0%, #1a5c3a 50%, #0d3b25 100%);
+    }
+    .card-glass {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+    }
+    .input-field {
+      transition: all 0.3s ease;
+    }
+    .input-field:focus {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(26, 92, 58, 0.15);
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #1a5c3a 0%, #2d8f5e 100%);
+      transition: all 0.3s ease;
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(26, 92, 58, 0.4);
+    }
+    .btn-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .btn-secondary {
+      background: #f0f4f8;
+      color: #374151;
+      transition: all 0.3s ease;
+      border: 2px solid #e5e7eb;
+    }
+    .btn-secondary:hover:not(:disabled) {
+      background: #e5e7eb;
+      transform: translateY(-2px);
+    }
+    .btn-secondary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .tree-card {
+      transition: all 0.3s ease;
+    }
+    .tree-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+    }
+    .stat-card {
+      background: linear-gradient(135deg, rgba(26, 92, 58, 0.1) 0%, rgba(45, 143, 94, 0.05) 100%);
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in {
+      animation: fadeIn 0.4s ease forwards;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .animate-pulse {
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    .tab-active {
+      background: linear-gradient(135deg, #1a5c3a 0%, #2d8f5e 100%);
+      color: white;
+    }
+    .species-btn {
+      transition: all 0.2s ease;
+    }
+    .species-btn:hover {
+      background: rgba(26, 92, 58, 0.1);
+    }
+    .species-btn.selected {
+      background: rgba(26, 92, 58, 0.2);
+      border-color: #1a5c3a;
+    }
+  </style>
+  <style>body { box-sizing: border-box; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+ </head>
+ <body class="h-full gradient-bg overflow-auto">
+  <div id="app" class="min-h-full w-full">
+   <!-- Header -->
+   <header class="sticky top-0 z-50 bg-white/90 backdrop-blur-md shadow-sm">
+    <div class="max-w-lg mx-auto px-4 py-4">
+     <div class="flex items-center gap-3">
+      <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-green-600 to-green-800 flex items-center justify-center shadow-lg">
+       <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+       </svg>
+      </div>
+      <div>
+       <h1 id="app-title" class="text-xl font-bold text-gray-800">Calculadora Florestal</h1>
+       <p class="text-sm text-gray-500">Volumetria e Valor de Árvores</p>
+      </div>
+     </div>
+    </div>
+   </header><!-- Navigation Tabs -->
+   <nav class="max-w-lg mx-auto px-4 py-3">
+    <div class="flex bg-white/20 rounded-2xl p-1.5 gap-1">
+     <button id="tab-calc" onclick="showTab('calc')" class="flex-1 py-3 px-4 rounded-xl font-medium text-sm transition-all tab-active">📐 Calcular</button> <button id="tab-history" onclick="showTab('history')" class="flex-1 py-3 px-4 rounded-xl font-medium text-sm transition-all text-white/80 hover:bg-white/10">📋 Histórico</button> <button id="tab-info" onclick="showTab('info')" class="flex-1 py-3 px-4 rounded-xl font-medium text-sm transition-all text-white/80 hover:bg-white/10">ℹ️ Info</button>
+    </div>
+   </nav><!-- Calculator Tab -->
+   <main id="calc-content" class="max-w-lg mx-auto px-4 pb-8">
+    <!-- Stats Summary -->
+    <div id="stats-container" class="grid grid-cols-3 gap-3 mb-6">
+     <div class="stat-card rounded-2xl p-4 text-center">
+      <p class="text-2xl font-bold text-green-700" id="total-trees">0</p>
+      <p class="text-xs text-gray-600 mt-1">Árvores</p>
+     </div>
+     <div class="stat-card rounded-2xl p-4 text-center">
+      <p class="text-2xl font-bold text-green-700" id="total-volume">0</p>
+      <p class="text-xs text-gray-600 mt-1">m³ Total</p>
+     </div>
+     <div class="stat-card rounded-2xl p-4 text-center">
+      <p class="text-2xl font-bold text-green-700" id="total-value">0</p>
+      <p class="text-xs text-gray-600 mt-1">Valor Total</p>
+     </div>
+    </div><!-- Calculator Card -->
+    <div class="card-glass rounded-3xl shadow-xl p-6 animate-fade-in">
+     <h2 class="text-lg font-semibold text-gray-800 mb-5 flex items-center gap-2">🌳 Nova Medição</h2><!-- Tree Name -->
+     <div class="mb-4">
+      <label class="block text-sm font-medium text-gray-700 mb-2">Nome/Identificação</label> <input type="text" id="tree-name" placeholder="Ex: Árvore #1, Talhão A..." class="input-field w-full px-4 py-3.5 rounded-xl border-2 border-gray-200 focus:border-green-500 focus:outline-none text-gray-800">
+     </div><!-- Species Selection -->
+     <div class="mb-4">
+      <label class="block text-sm font-medium text-gray-700 mb-2">Espécie</label>
+      <div class="grid grid-cols-2 gap-2" id="species-grid">
+       <button type="button" onclick="selectSpecies('angelim-pedra', 850)" class="species-btn p-2 rounded-xl border-2 border-gray-200 text-left text-xs" data-species="angelim-pedra"> <span class="text-lg">🪵</span> <span class="font-medium text-gray-700 ml-1">Angelim Pedra</span> <span class="block text-xs text-gray-500 ml-6">R$ 850/m³</span> </button> <button type="button" onclick="selectSpecies('angelim-vermelho', 750)" class="species-btn p-2 rounded-xl border-2 border-gray-200 text-left text-xs" data-species="angelim-vermelho"> <span class="text-lg">🪵</span> <span class="font-medium text-gray-700 ml-1">Angelim Verm.</span> <span class="block text-xs text-gray-500 ml-6">R$ 750/m³</span> </button> <button type="button" onclick="selectSpecies('louro-vermelho', 920)" class="species-btn p-2 rounded-xl border-2 border-gray-200 text-left text-xs" data-species="louro-vermelho"> <span class="text-lg">🌳</span> <span class="font-medium text-gray-700 ml-1">Louro Vermelho</span> <span class="block text-xs text-gray-500 ml-6">R$ 920/m³</span> </button> <button type="button" onclick="selectSpecies('cumaru', 1100)" class="species-btn p-2 rounded-xl border-2 border-gray-200 text-left text-xs" data-species="cumaru"> <span class="text-lg">🪵</span> <span class="font-medium text-gray-700 ml-1">Cumaru</span> <span class="block text-xs text-gray-500 ml-6">R$ 1.100/m³</span> </button> <button type="button" onclick="selectSpecies('pequia', 680)" class="species-btn p-2 rounded-xl border-2 border-gray-200 text-left text-xs" data-species="pequia"> <span class="text-lg">🌿</span> <span class="font-medium text-gray-700 ml-1">Pequiá</span> <span class="block text-xs text-gray-500 ml-6">R$ 680/m³</span> </button> <button type="button" onclick="selectSpecies('jatoba', 890)" class="species-btn p-2 rounded-xl border-2 border-gray-200 text-left text-xs" data-species="jatoba"> <span class="text-lg">🪵</span> <span class="font-medium text-gray-700 ml-1">Jatobá</span> <span class="block text-xs text-gray-500 ml-6">R$ 890/m³</span> </button> <button type="button" onclick="selectSpecies('macaranduba', 960)" class="species-btn p-2 rounded-xl border-2 border-gray-200 text-left text-xs" data-species="macaranduba"> <span class="text-lg">🌳</span> <span class="font-medium text-gray-700 ml-1">Maçaranduba</span> <span class="block text-xs text-gray-500 ml-6">R$ 960/m³</span> </button> <button type="button" onclick="selectSpecies('mandioqueiro', 720)" class="species-btn p-2 rounded-xl border-2 border-gray-200 text-left text-xs" data-species="mandioqueiro"> <span class="text-lg">🌿</span> <span class="font-medium text-gray-700 ml-1">Mandioqueiro</span> <span class="block text-xs text-gray-500 ml-6">R$ 720/m³</span> </button> <button type="button" onclick="selectSpecies('tauari', 580)" class="species-btn p-2 rounded-xl border-2 border-gray-200 text-left text-xs" data-species="tauari"> <span class="text-lg">🌲</span> <span class="font-medium text-gray-700 ml-1">Tauari</span> <span class="block text-xs text-gray-500 ml-6">R$ 580/m³</span> </button> <button type="button" onclick="selectSpecies('ipe', 1350)" class="species-btn p-2 rounded-xl border-2 border-gray-200 text-left text-xs" data-species="ipe"> <span class="text-lg">🪵</span> <span class="font-medium text-gray-700 ml-1">Ipê</span> <span class="block text-xs text-gray-500 ml-6">R$ 1.350/m³</span> </button>
+      </div><input type="text" id="custom-species" placeholder="Ou digite outra espécie..." class="input-field w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-green-500 focus:outline-none text-gray-800 mt-2 text-sm">
+     </div><!-- Height Input -->
+     <div class="mb-4">
+      <label class="block text-sm font-medium text-gray-700 mb-2">Altura da Árvore (metros) <span class="text-gray-400 font-normal">- até a primeira bifurcação</span></label>
+      <div class="relative">
+       <input type="number" id="height" step="0.1" min="0" placeholder="Ex: 15.5" class="input-field w-full px-4 py-3.5 rounded-xl border-2 border-gray-200 focus:border-green-500 focus:outline-none text-gray-800 pr-12"> <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">m</span>
+      </div>
+     </div><!-- Measurement Type Selection -->
+     <div class="mb-4">
+      <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Medição</label>
+      <div class="flex gap-3">
+       <label class="flex items-center gap-2 cursor-pointer flex-1 p-3 rounded-xl border-2 border-gray-200 hover:border-green-400 transition-colors" id="cap-label"> <input type="radio" name="measurement-type" value="cap" onchange="changeMeasurementType('cap')" checked class="w-4 h-4"> <span class="text-sm font-medium text-gray-700">CAP (circunferência)</span> </label> <label class="flex items-center gap-2 cursor-pointer flex-1 p-3 rounded-xl border-2 border-gray-200 hover:border-green-400 transition-colors" id="dap-label"> <input type="radio" name="measurement-type" value="dap" onchange="changeMeasurementType('dap')" class="w-4 h-4"> <span class="text-sm font-medium text-gray-700">DAP (diâmetro)</span> </label>
+      </div>
+     </div><!-- CAP Input -->
+     <div id="cap-input" class="mb-4">
+      <label class="block text-sm font-medium text-gray-700 mb-2">CAP - Circunferência à Altura do Peito (cm) <span class="text-gray-400 font-normal">- medido a 1,30m do solo</span></label>
+      <div class="relative">
+       <input type="number" id="cap" step="0.1" min="0" placeholder="Ex: 110" class="input-field w-full px-4 py-3.5 rounded-xl border-2 border-gray-200 focus:border-green-500 focus:outline-none text-gray-800 pr-12"> <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">cm</span>
+      </div>
+     </div><!-- DAP Input -->
+     <div id="dap-input" class="mb-4 hidden">
+      <label class="block text-sm font-medium text-gray-700 mb-2">DAP - Diâmetro à Altura do Peito (cm) <span class="text-gray-400 font-normal">- medido a 1,30m do solo</span></label>
+      <div class="relative">
+       <input type="number" id="dbh" step="0.1" min="0" placeholder="Ex: 35" class="input-field w-full px-4 py-3.5 rounded-xl border-2 border-gray-200 focus:border-green-500 focus:outline-none text-gray-800 pr-12"> <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">cm</span>
+      </div>
+     </div><!-- Custom Price -->
+     <div class="mb-6">
+      <label class="block text-sm font-medium text-gray-700 mb-2">Preço por m³ <span id="currency-label">(R$)</span></label>
+      <div class="relative">
+       <input type="number" id="price" step="1" min="0" placeholder="Preço da madeira por m³" class="input-field w-full px-4 py-3.5 rounded-xl border-2 border-gray-200 focus:border-green-500 focus:outline-none text-gray-800 pr-16"> <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">/m³</span>
+      </div>
+     </div><!-- Calculate Button --> <button id="calc-btn" onclick="calculateAndSave()" class="btn-primary w-full py-4 rounded-xl text-white font-semibold text-lg shadow-lg flex items-center justify-center gap-2">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+      </svg><span id="calc-btn-text">Calcular e Salvar</span> </button> <!-- Result Display -->
+     <div id="result-container" class="hidden mt-6 p-5 rounded-2xl bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200">
+      <h3 class="font-semibold text-green-800 mb-3 flex items-center gap-2">✅ Resultado do Cálculo</h3>
+      <div class="grid grid-cols-2 gap-4">
+       <div>
+        <p class="text-xs text-gray-500 uppercase tracking-wide">Volume</p>
+        <p class="text-2xl font-bold text-green-700" id="result-volume">0.00 m³</p>
+       </div>
+       <div>
+        <p class="text-xs text-gray-500 uppercase tracking-wide">Valor Estimado</p>
+        <p class="text-2xl font-bold text-green-700" id="result-value">R$ 0,00</p>
+       </div>
+      </div>
+      <div class="mt-3 pt-3 border-t border-green-200">
+       <p class="text-xs text-gray-500"><strong>Fórmula:</strong> V = (π/4) × D² × H × Fator de Forma (0.7)</p>
+      </div>
+     </div><!-- Error Message -->
+     <div id="error-container" class="hidden mt-4 p-4 rounded-xl bg-red-50 border border-red-200">
+      <p class="text-red-700 text-sm flex items-center gap-2"><span>⚠️</span> <span id="error-message">Erro ao salvar</span></p>
+     </div><!-- Limit Warning -->
+     <div id="limit-warning" class="hidden mt-4 p-4 rounded-xl bg-amber-50 border border-amber-200">
+      <p class="text-amber-700 text-sm flex items-center gap-2"><span>⚠️</span> <span>Limite de 999 registros atingido. Delete alguns para continuar.</span></p>
+     </div>
+    </div>
+   </main><!-- History Tab -->
+   <main id="history-content" class="max-w-lg mx-auto px-4 pb-8 hidden">
+    <div class="card-glass rounded-3xl shadow-xl p-6 animate-fade-in">
+     <div class="flex items-center justify-between mb-5">
+      <h2 class="text-lg font-semibold text-gray-800 flex items-center gap-2">📋 Histórico de Medições</h2><span id="history-count" class="text-sm text-gray-500">0 registros</span>
+     </div>
+     <div class="mb-4 flex gap-2">
+      <button onclick="exportToCSV()" class="btn-secondary flex-1 py-3 rounded-xl font-medium text-sm flex items-center justify-center gap-2"> <span>📊</span> Exportar CSV </button> <button onclick="exportToPDF()" class="btn-secondary flex-1 py-3 rounded-xl font-medium text-sm flex items-center justify-center gap-2"> <span>📄</span> Exportar PDF </button>
+     </div>
+     <div id="history-list" class="space-y-3">
+      <div class="text-center py-8 text-gray-400">
+       <p class="text-4xl mb-3">🌱</p>
+       <p>Nenhuma medição registrada ainda.</p>
+       <p class="text-sm mt-1">Faça sua primeira medição!</p>
+      </div>
+     </div>
+    </div>
+   </main><!-- Info Tab -->
+   <main id="info-content" class="max-w-lg mx-auto px-4 pb-8 hidden">
+    <div class="card-glass rounded-3xl shadow-xl p-6 animate-fade-in">
+     <h2 class="text-lg font-semibold text-gray-800 mb-5 flex items-center gap-2">📚 Como Usar</h2>
+     <div class="space-y-4">
+      <div class="p-4 rounded-xl bg-green-50 border border-green-100">
+       <h3 class="font-semibold text-green-800 mb-2">📏 Medindo a Altura</h3>
+       <p class="text-sm text-gray-600">Use um clinômetro, aplicativo de medição ou estimativa visual. Meça do solo até a primeira bifurcação principal ou topo comercial.</p>
+      </div>
+      <div class="p-4 rounded-xl bg-blue-50 border border-blue-100">
+       <h3 class="font-semibold text-blue-800 mb-2">📐 CAP vs DAP</h3>
+       <p class="text-sm text-gray-600 mb-2"><strong>CAP (Circunferência):</strong> Meça com fita métrica a 1,30m do solo e forneça a circunferência em cm.</p>
+       <p class="text-sm text-gray-600"><strong>DAP (Diâmetro):</strong> Divida o CAP por π (3,14159) para obter o diâmetro, ou meça diretamente com paquímetro florestal.</p>
+      </div>
+      <div class="p-4 rounded-xl bg-amber-50 border border-amber-100">
+       <h3 class="font-semibold text-amber-800 mb-2">🧮 Fórmula de Volume</h3>
+       <p class="text-sm text-gray-600 mb-2">Volume = (π/4) × D² × Altura × Fator de Forma</p>
+       <p class="text-xs text-gray-500">O fator de forma (0.56) considera que a árvore não é um cilindro perfeito.</p>
+      </div>
+      <div class="p-4 rounded-xl bg-purple-50 border border-purple-100">
+       <h3 class="font-semibold text-purple-800 mb-2">💰 Espécies e Preços</h3>
+       <ul class="text-sm text-gray-600 space-y-1">
+        <li>• Angelim Pedra: R$ 850/m³</li>
+        <li>• Louro Vermelho: R$ 920/m³</li>
+        <li>• Cumaru: R$ 1.100/m³</li>
+        <li>• Ipê: R$ 1.350/m³</li>
+        <li>• Jatobá: R$ 890/m³</li>
+        <li>• Maçaranduba: R$ 960/m³</li>
+       </ul>
+       <p class="text-xs text-gray-500 mt-2">*Valores variam conforme região e qualidade da madeira.</p>
+      </div>
+     </div>
+    </div>
+   </main>
+  </div>
+  <script>
+    // Configuration
+    const defaultConfig = {
+      app_title: 'Calculadora Florestal',
+      currency_label: 'R$',
+      background_color: '#0d3b25',
+      surface_color: '#ffffff',
+      text_color: '#1f2937',
+      primary_action_color: '#1a5c3a',
+      secondary_action_color: '#dc2626',
+      font_family: 'Outfit',
+      font_size: 16
+    };
+
+    let currentRecordCount = 0;
+    let selectedSpecies = '';
+    let selectedPrice = 0;
+    let treeRecords = [];
+    let measurementType = 'cap';
+
+    // Load from localStorage
+    function loadFromStorage() {
+      const stored = localStorage.getItem('treeRecords');
+      if (stored) {
+        try {
+          treeRecords = JSON.parse(stored);
+          updateStats(treeRecords);
+          renderHistoryList(treeRecords);
+        } catch (e) {
+          console.error('Erro ao carregar dados:', e);
+        }
+      }
+    }
+
+    // Save to localStorage
+    function saveToStorage() {
+      localStorage.setItem('treeRecords', JSON.stringify(treeRecords));
+    }
+
+    // Change Measurement Type
+    function changeMeasurementType(type) {
+      measurementType = type;
+      const capInput = document.getElementById('cap-input');
+      const dapInput = document.getElementById('dap-input');
+      
+      if (type === 'cap') {
+        capInput.classList.remove('hidden');
+        dapInput.classList.add('hidden');
+        document.getElementById('cap').focus();
+      } else {
+        capInput.classList.add('hidden');
+        dapInput.classList.remove('hidden');
+        document.getElementById('dbh').focus();
+      }
+    }
+
+    // Tab Navigation
+    function showTab(tabName) {
+      const tabs = ['calc', 'history', 'info'];
+      tabs.forEach(tab => {
+        const content = document.getElementById(`${tab}-content`);
+        const button = document.getElementById(`tab-${tab}`);
+        if (tab === tabName) {
+          content.classList.remove('hidden');
+          button.classList.add('tab-active');
+          button.classList.remove('text-white/80', 'hover:bg-white/10');
+        } else {
+          content.classList.add('hidden');
+          button.classList.remove('tab-active');
+          button.classList.add('text-white/80', 'hover:bg-white/10');
+        }
+      });
+    }
+
+    // Species Selection
+    function selectSpecies(species, price) {
+      selectedSpecies = species;
+      selectedPrice = price;
+      document.getElementById('price').value = price;
+      document.getElementById('custom-species').value = '';
+      
+      document.querySelectorAll('.species-btn').forEach(btn => {
+        btn.classList.remove('selected');
+        if (btn.dataset.species === species) {
+          btn.classList.add('selected');
+        }
+      });
+    }
+
+    // Calculate Volume from CAP
+    function calculateVolumeFromCAP(capCm, heightM) {
+      const capM = capCm / 100;
+      const diameterM = capM / Math.PI;
+      const formFactor = 0.7;
+      const volume = (Math.PI / 4) * Math.pow(diameterM, 2) * heightM * formFactor;
+      return volume;
+    }
+
+    // Calculate Volume from DAP
+    function calculateVolumeFromDAP(dbhCm, heightM) {
+      const dbhM = dbhCm / 100;
+      const formFactor = 0.7;
+      const volume = (Math.PI / 4) * Math.pow(dbhM, 2) * heightM * formFactor;
+      return volume;
+    }
+
+    // Format Currency
+    function formatCurrency(value) {
+      const config = window.elementSdk?.config || defaultConfig;
+      const currency = config.currency_label || defaultConfig.currency_label;
+      return `${currency} ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+
+    // Calculate and Save
+    async function calculateAndSave() {
+      const treeName = document.getElementById('tree-name').value.trim() || `Árvore #${currentRecordCount + 1}`;
+      const customSpecies = document.getElementById('custom-species').value.trim();
+      const species = customSpecies || selectedSpecies || 'Não especificada';
+      const height = parseFloat(document.getElementById('height').value);
+      const price = parseFloat(document.getElementById('price').value);
+      
+      let measurementValue, volume;
+      
+      if (measurementType === 'cap') {
+        measurementValue = parseFloat(document.getElementById('cap').value);
+        if (!measurementValue || measurementValue <= 0) {
+          showError('Por favor, informe o CAP (circunferência).');
+          return;
+        }
+        volume = calculateVolumeFromCAP(measurementValue, height);
+      } else {
+        measurementValue = parseFloat(document.getElementById('dbh').value);
+        if (!measurementValue || measurementValue <= 0) {
+          showError('Por favor, informe o DAP (diâmetro).');
+          return;
+        }
+        volume = calculateVolumeFromDAP(measurementValue, height);
+      }
+
+      // Validation
+      if (!height || height <= 0) {
+        showError('Por favor, informe a altura da árvore.');
+        return;
+      }
+      if (!price || price <= 0) {
+        showError('Por favor, informe o preço por m³.');
+        return;
+      }
+
+      // Check limit
+      if (currentRecordCount >= 999) {
+        document.getElementById('limit-warning').classList.remove('hidden');
+        return;
+      }
+
+      hideError();
+      document.getElementById('limit-warning').classList.add('hidden');
+
+      // Show result
+      const estimatedValue = volume * price;
+      document.getElementById('result-volume').textContent = `${volume.toFixed(3)} m³`;
+      document.getElementById('result-value').textContent = formatCurrency(estimatedValue);
+      document.getElementById('result-container').classList.remove('hidden');
+
+      // Save to localStorage
+      const btn = document.getElementById('calc-btn');
+      const btnText = document.getElementById('calc-btn-text');
+      btn.disabled = true;
+      btnText.textContent = 'Salvando...';
+
+      const record = {
+        id: Date.now().toString(),
+        tree_name: treeName,
+        species: species,
+        height: height,
+        measurement_type: measurementType,
+        measurement_value: parseFloat(measurementValue.toFixed(2)),
+        volume: parseFloat(volume.toFixed(4)),
+        estimated_value: parseFloat(estimatedValue.toFixed(2)),
+        created_at: new Date().toISOString()
+      };
+
+      // Simulate async save
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      treeRecords.push(record);
+      saveToStorage();
+      updateStats(treeRecords);
+      renderHistoryList(treeRecords);
+
+      btn.disabled = false;
+      btnText.textContent = 'Calcular e Salvar';
+
+      // Clear form
+      document.getElementById('tree-name').value = '';
+      document.getElementById('height').value = '';
+      document.getElementById('cap').value = '';
+      document.getElementById('dbh').value = '';
+      document.getElementById('custom-species').value = '';
+      document.querySelectorAll('.species-btn').forEach(btn => btn.classList.remove('selected'));
+      selectedSpecies = '';
+    }
+
+    // Show/Hide Error
+    function showError(message) {
+      document.getElementById('error-message').textContent = message;
+      document.getElementById('error-container').classList.remove('hidden');
+    }
+
+    function hideError() {
+      document.getElementById('error-container').classList.add('hidden');
+    }
+
+    // Delete Record
+    function deleteRecord(id) {
+      const index = treeRecords.findIndex(r => r.id === id);
+      if (index === -1) return;
+
+      const btn = document.querySelector(`[data-delete-id="${id}"]`);
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = '...';
+      }
+
+      setTimeout(() => {
+        treeRecords.splice(index, 1);
+        saveToStorage();
+        updateStats(treeRecords);
+        renderHistoryList(treeRecords);
+        
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = '🗑️';
+        }
+      }, 300);
+    }
+
+    // Update Stats
+    function updateStats(data) {
+      currentRecordCount = data.length;
+      const totalVolume = data.reduce((sum, r) => sum + (r.volume || 0), 0);
+      const totalValue = data.reduce((sum, r) => sum + (r.estimated_value || 0), 0);
+
+      document.getElementById('total-trees').textContent = data.length;
+      document.getElementById('total-volume').textContent = totalVolume.toFixed(2);
+      document.getElementById('total-value').textContent = formatCurrency(totalValue).replace(/R\$\s?/, '');
+      document.getElementById('history-count').textContent = `${data.length} registro${data.length !== 1 ? 's' : ''}`;
+
+      if (data.length >= 999) {
+        document.getElementById('limit-warning').classList.remove('hidden');
+      } else {
+        document.getElementById('limit-warning').classList.add('hidden');
+      }
+    }
+
+    // Render History List
+    function renderHistoryList(data) {
+      const container = document.getElementById('history-list');
+      
+      if (data.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-8 text-gray-400">
+            <p class="text-4xl mb-3">🌱</p>
+            <p>Nenhuma medição registrada ainda.</p>
+            <p class="text-sm mt-1">Faça sua primeira medição!</p>
+          </div>
+        `;
+        return;
+      }
+
+      const existingItems = new Map(
+        [...container.children].map(el => [el.dataset.recordId, el])
+      );
+
+      const sortedData = [...data].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+      sortedData.forEach(record => {
+        const id = record.__backendId;
+        let el = existingItems.get(id);
+
+        if (el) {
+          updateTreeCard(el, record);
+          existingItems.delete(id);
+        } else {
+          el = createTreeCard(record);
+          container.appendChild(el);
+        }
+      });
+
+      existingItems.forEach(el => el.remove());
+    }
+
+    function createTreeCard(record) {
+      const el = document.createElement('div');
+      el.className = 'tree-card p-4 rounded-xl border border-gray-100 bg-white shadow-sm';
+      el.dataset.recordId = record.id;
+      updateTreeCard(el, record);
+      return el;
+    }
+
+    function updateTreeCard(el, record) {
+      const date = new Date(record.created_at);
+      const dateStr = date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+      const measurementLabel = record.measurement_type === 'cap' ? 'CAP' : 'DAP';
+      
+      el.innerHTML = `
+        <div class="flex items-start justify-between">
+          <div class="flex-1">
+            <h4 class="font-semibold text-gray-800">${record.tree_name || 'Sem nome'}</h4>
+            <p class="text-sm text-gray-500">${record.species || 'Espécie não informada'} • ${dateStr}</p>
+          </div>
+          <button onclick="deleteRecord('${record.id}')" data-delete-id="${record.id}"
+            class="text-red-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-lg transition-colors">
+            🗑️
+          </button>
+        </div>
+        <div class="grid grid-cols-4 gap-3 mt-3 pt-3 border-t border-gray-100">
+          <div>
+            <p class="text-xs text-gray-400">Altura</p>
+            <p class="font-medium text-gray-700">${record.height}m</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-400">${measurementLabel}</p>
+            <p class="font-medium text-gray-700">${record.measurement_value}cm</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-400">Volume</p>
+            <p class="font-medium text-green-600">${record.volume?.toFixed(3)}m³</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-400">Valor</p>
+            <p class="font-medium text-green-600">${formatCurrency(record.estimated_value || 0)}</p>
+          </div>
+        </div>
+      `;
+    }
+
+    // Export to CSV
+    function exportToCSV() {
+      if (treeRecords.length === 0) {
+        showError('Nenhum registro para exportar.');
+        return;
+      }
+
+      let csv = 'Nome,Espécie,Altura (m),Tipo de Medição,Medição (cm),Volume (m³),Valor Estimado (R$),Data\n';
+      
+      treeRecords.forEach(record => {
+        const date = new Date(record.created_at).toLocaleDateString('pt-BR');
+        const measurementLabel = record.measurement_type === 'cap' ? 'CAP' : 'DAP';
+        csv += `"${record.tree_name}","${record.species}",${record.height},"${measurementLabel}",${record.measurement_value},${record.volume?.toFixed(4)},${record.estimated_value?.toFixed(2)},${date}\n`;
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `relatorio_florestal_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // Export to PDF
+    function exportToPDF() {
+      if (treeRecords.length === 0) {
+        showError('Nenhum registro para exportar.');
+        return;
+      }
+
+      let html = `
+        <html>
+          <head>
+            <meta charset="utf-8">
+            <title>Relatório Florestal</title>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 20px; color: #333; }
+              h1 { color: #1a5c3a; border-bottom: 3px solid #1a5c3a; padding-bottom: 10px; }
+              table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+              th { background-color: #1a5c3a; color: white; padding: 12px; text-align: left; font-weight: bold; }
+              td { padding: 10px; border-bottom: 1px solid #ddd; }
+              tr:nth-child(even) { background-color: #f9f9f9; }
+              .summary { margin-top: 20px; padding: 15px; background-color: #f0f0f0; border-radius: 5px; }
+              .summary-item { margin: 5px 0; font-size: 14px; }
+              .summary-item strong { color: #1a5c3a; }
+              .footer { margin-top: 30px; font-size: 12px; color: #666; text-align: center; }
+            </style>
+          </head>
+          <body>
+            <h1>Relatório de Volumetria Florestal</h1>
+            <p><strong>Data do Relatório:</strong> ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}</p>
+            
+            <table>
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>Espécie</th>
+                  <th>Altura (m)</th>
+                  <th>Tipo</th>
+                  <th>Medição (cm)</th>
+                  <th>Volume (m³)</th>
+                  <th>Valor Estimado (R$)</th>
+                  <th>Data</th>
+                </tr>
+              </thead>
+              <tbody>
+      `;
+
+      treeRecords.forEach(record => {
+        const date = new Date(record.created_at).toLocaleDateString('pt-BR');
+        const measurementLabel = record.measurement_type === 'cap' ? 'CAP' : 'DAP';
+        html += `
+          <tr>
+            <td>${record.tree_name}</td>
+            <td>${record.species}</td>
+            <td>${record.height}</td>
+            <td>${measurementLabel}</td>
+            <td>${record.measurement_value}</td>
+            <td>${record.volume?.toFixed(4)}</td>
+            <td>R$ ${record.estimated_value?.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+            <td>${date}</td>
+          </tr>
+        `;
+      });
+
+      const totalVolume = treeRecords.reduce((sum, r) => sum + (r.volume || 0), 0);
+      const totalValue = treeRecords.reduce((sum, r) => sum + (r.estimated_value || 0), 0);
+
+      html += `
+              </tbody>
+            </table>
+
+            <div class="summary">
+              <h3>Resumo</h3>
+              <div class="summary-item"><strong>Total de Árvores:</strong> ${treeRecords.length}</div>
+              <div class="summary-item"><strong>Volume Total:</strong> ${totalVolume.toFixed(3)} m³</div>
+              <div class="summary-item"><strong>Valor Total Estimado:</strong> R$ ${totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+            </div>
+
+            <div class="footer">
+              <p>Relatório gerado pela Calculadora Florestal</p>
+              <p>Valores estimados com base no preço por m³ informado</p>
+            </div>
+          </body>
+        </html>
+      `;
+
+      const printWindow = window.open('', '', 'height=600,width=800');
+      printWindow.document.write(html);
+      printWindow.document.close();
+      printWindow.print();
+    }
+
+    // Data Handler
+    function onStorageChange() {
+      loadFromStorage();
+    }
+
+    // Element SDK Handler
+    function onConfigChange(config) {
+      const c = { ...defaultConfig, ...config };
+      
+      document.getElementById('app-title').textContent = c.app_title;
+      document.getElementById('currency-label').textContent = `(${c.currency_label})`;
+      
+      // Apply font
+      document.body.style.fontFamily = `${c.font_family}, Outfit, sans-serif`;
+      
+      // Apply font size scaling
+      document.body.style.fontSize = `${c.font_size}px`;
+    }
+
+    // Initialize
+    (async function init() {
+      // Init Element SDK
+      if (window.elementSdk) {
+        window.elementSdk.init({
+          defaultConfig,
+          onConfigChange,
+          mapToCapabilities: (config) => ({
+            recolorables: [
+              {
+                get: () => config.background_color || defaultConfig.background_color,
+                set: (v) => window.elementSdk.setConfig({ background_color: v })
+              },
+              {
+                get: () => config.surface_color || defaultConfig.surface_color,
+                set: (v) => window.elementSdk.setConfig({ surface_color: v })
+              },
+              {
+                get: () => config.text_color || defaultConfig.text_color,
+                set: (v) => window.elementSdk.setConfig({ text_color: v })
+              },
+              {
+                get: () => config.primary_action_color || defaultConfig.primary_action_color,
+                set: (v) => window.elementSdk.setConfig({ primary_action_color: v })
+              },
+              {
+                get: () => config.secondary_action_color || defaultConfig.secondary_action_color,
+                set: (v) => window.elementSdk.setConfig({ secondary_action_color: v })
+              }
+            ],
+            borderables: [],
+            fontEditable: {
+              get: () => config.font_family || defaultConfig.font_family,
+              set: (v) => window.elementSdk.setConfig({ font_family: v })
+            },
+            fontSizeable: {
+              get: () => config.font_size || defaultConfig.font_size,
+              set: (v) => window.elementSdk.setConfig({ font_size: v })
+            }
+          }),
+          mapToEditPanelValues: (config) => new Map([
+            ['app_title', config.app_title || defaultConfig.app_title],
+            ['currency_label', config.currency_label || defaultConfig.currency_label]
+          ])
+        });
+      }
+
+      // Load initial data from localStorage
+      loadFromStorage();
+    })();
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9d313f39d1ef00e8',t:'MTc3MTk2MDA1OC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
